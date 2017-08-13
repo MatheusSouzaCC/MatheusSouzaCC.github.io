@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Grafos.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <script type="text/javascript" src="vivagraph.js"></script>
+    <script src="http://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous"></script>
+
+
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <!--
+    This example uses jQuery, but it's only for convenience of listenting
+    to DOM events. The jQuery can be replaced with your favorite library.
+     -->
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.1/css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.1/js/materialize.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('.modal').modal();
+            $('.tooltipped').tooltip();
+        });
+
+        var links = false;
+        var graph = Viva.Graph.graph();
+        var selectedNode = null;
+        var removeNode = false;
+        var removeLink = false;
+        var justInteract = true;
+        var lights = 'on';
+
+        function addNewNode() {
+            var id = $("#inputID").val();
+            var url = $("#inputURL").val() == "" ? 'circle.png' : $("#inputURL").val();
+
+            if (id == "" || id == undefined) {
+                alert("Informe um nome ao vértice");
+            } else {
+                $("#modal1").modal('close');
+                graph.beginUpdate();
+                graph.addNode(id, url);
+
+                graph.endUpdate();
+                $("#inputID").val("");
+                $("#inputURL").val("");
+            }
+
+        }
+
+        function deleteNode() {
+            if (!removeNode) {
+                selectedNode = null;
+                links = false;
+                removeNode = true;
+                justInteract = false;
+                Materialize.Toast.removeAll();
+                switchPulse();
+                Materialize.toast('Clique no vértice para deletá-lo. &nbsp<a href="#" id="cancelRemoveNode">Cancelar</a>');
+                $("#cancelRemoveNode").click(function () {
+                    Materialize.Toast.removeAll();
+                    disableAllActions();
+                });
+            }
+        }
+
+        function disableAllActions() {
+            justInteract = true;
+            removeNode = false;
+            removeLink = false;
+            links = false;
+            selectedNode = null;
+            Materialize.Toast.removeAll();
+            switchPulse();
+        }
+
+        function switchPulse() {
+            $(".btn-floating").removeClass('pulse');
+
+            if (justInteract) {
+                $('#justInteract').addClass('pulse');
+            } else if (links) {
+                $('#enableLinks').addClass('pulse');
+            } else if (removeNode) {
+                $('#deleteNode').addClass('pulse');
+            } else if (removeLink) {
+                $('#enableDeleteLinks').addClass('pulse');
+            }
+        }
+
+        function enableLinks() {
+            if (!links) {
+                links = true;
+                justInteract = false;
+                removeNode = false;
+                switchPulse();
+                Materialize.Toast.removeAll();
+                Materialize.toast('Selecione dois vértices. &nbsp<a href="#" id="cancelLink">Cancelar</a>');
+
+                $("#cancelLink").click(function () {
+                    links = false;
+                    selectedNode = null;
+                    disableAllActions();
+                    Materialize.Toast.removeAll();
+                });
+            }
+
+        }
+
+        function enableRemoveLinks() {
+            disableAllActions();
+            justInteract = false;
+            removeLink = true;
+            switchPulse();
+            Materialize.Toast.removeAll();            
+            Materialize.toast('Clique na aresta para excluí-la. &nbsp<a href="#" id="cancelRemoveLink">Cancelar</a>');
+
+            $("#cancelRemoveLink").click(function () {                
+                disableAllActions();
+                Materialize.Toast.removeAll();
+            });
+        }
+
+        function customGraphics() {
+            var graphics = Viva.Graph.View.svgGraphics(),
+                nodeSize = 48,
+                // we use this method to highlight all realted links
+                // when user hovers mouse over a node:
+                highlightRelatedNodes = function (nodeId, isOn) {
+                    // just enumerate all realted nodes and update link color:
+                    graph.forEachLinkedNode(nodeId, function (node, link) {
+                        var linkUI = graphics.getLinkUI(link.id);
+                        if (linkUI) {
+                            // linkUI is a UI object created by graphics below
+                            linkUI.attr('stroke', isOn ? 'blue' : 'gray');
+                        }
+                    });
+                };
+
+            // Since we are using SVG we can easily subscribe to any supported
+            // events (http://www.w3.org/TR/SVG/interact.html#SVGEvents ),
+            // including mouse events:
+            graphics.node(function (node) {
+                var ui = Viva.Graph.svg('g'),
+                    svgText = Viva.Graph.svg('text').attr('y', '-4px').attr('fill','teal').text(node.id),
+                    img = Viva.Graph.svg('image')
+                        .attr('width', nodeSize)
+                        .attr('height', nodeSize)
+                        .link(node.data == '' || node.data == null? 'circle.png' : node.data);
+                
+                ui.append(svgText);
+                ui.append(img);
+                $(ui).hover(function () { // mouse over															
+                    highlightRelatedNodes(node.id, true);
+                }, function () { // mouse out
+                    highlightRelatedNodes(node.id, false);
+                });
+
+                $(ui).click(function () {
+
+                    if (removeNode) {
+                        var aux = node.id;
+                        graph.removeNode(node.id);                                                
+                        Materialize.toast('Vértice ' + aux + ' excluído.', 3000);
+                    }
+
+                    if (selectedNode != null && links == true) {
+                        var link = graph.addLink(selectedNode.id, node.id);                                                
+                        Materialize.toast('Caminho (<b>' + selectedNode.id +'</b>, <b>'+node.id+ '</b>) criado.', 3000);                        
+                        selectedNode = null;                        
+                    } else if (links == true) {
+                        selectedNode = node;
+                        
+                        Materialize.toast('Vértice&nbsp<b>' + node.id + '</b>&nbspselecionado.Selecione o segundo vértice.',2000);
+                        
+                    }
+                });
+
+                return ui;
+            }).placeNode(function (nodeUI, pos) {
+                nodeUI.attr('transform',
+                    'translate(' +
+                    (pos.x - nodeSize / 2) + ',' + (pos.y - nodeSize / 2) +
+                    ')');
+            });
+
+            graphics.link(function (link) {
+                var ui = Viva.Graph.svg('path');
+                ui.attr('stroke', 'gray');
+
+                $(ui).hover(function () {
+                    ui.attr('stroke', (removeLink) ? 'red' : 'blue');
+                }, function () {
+                    ui.attr('stroke', 'gray');
+                });
+
+                $(ui).click(function () {
+                    if (removeLink) {                                                
+                        Materialize.toast('Aresta (<b>'+link.fromId +','+link.toId +'</b>) removido.', 3000);
+                        graph.removeLink(link);                        
+                    }
+                });
+
+
+                return ui;
+            }).placeLink(function (linkUI, fromPos, toPos) {
+                var data = 'M' + fromPos.x + ',' + fromPos.y +
+                    'L' + toPos.x + ',' + toPos.y;
+
+                linkUI.attr("d", data);
+            })
+
+            return graphics;
+        }
+
+        function toggleLights(){
+            if(lights == 'on'){
+                $('body').css('background-color','black');
+                $('#bulb').removeClass('black');
+                $('#bulb').addClass('white');                
+                $('#bulbIcon').removeClass('white-text');
+                $('#bulbIcon').addClass('black-text');                                
+                lights = 'off';
+            }else{
+                $('body').css('background-color','white');
+                $('#bulb').removeClass('white');
+                $('#bulb').addClass('black');                
+                $('#bulbIcon').removeClass('black-text');
+                $('#bulbIcon').addClass('white-text');                
+                lights = 'on';
+            }
+        }
+
+        function main() {
+            // As in previous steps, we create a basic structure of a graph:            		           
+            var graphGenerator = Viva.Graph.generator();            
+            graphics = customGraphics();
+
+            // Finally render the graph with our customized graphics object:
+            var renderer = Viva.Graph.View.renderer(graph, {
+                graphics: graphics
+            });
+
+            $('.zoom').click(function (e) {
+                    e.preventDefault();
+                    if ($(this).hasClass('in')) {
+                        renderer.zoomIn();
+                    } else {
+                        renderer.zoomOut();
+                    }
+                });
+            
+            $('.reset').click(function () {
+                    renderer.reset()
+                });
+
+            renderer.run();            
+
+        }
+    </script>
+    <style type="text/css" media="screen">
+        html,
+        body,
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .btn {
+            margin-top: 3px;
+            margin-left: 3px
+        }
+        .zoom,.reset,#bulb{margin: 5px}
+
+        text{color: white !important}
+    </style>
+</head>
+
+<body onload='main()'>
+    <a id="bulb" onclick="toggleLights()" class="btn-floating waves-effect waves-dark black right"><i id='bulbIcon' class="white-text material-icons large">lightbulb_outline</i></a>
+    <a class="btn-floating waves-effect waves-light reset blue-grey lighten-3 right"><i class="black-text material-icons large">find_replace</i></a>
+    <a class="btn-floating waves-effect waves-light zoom out blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_out</i></a>
+    <a class="btn-floating waves-effect waves-light zoom in blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_in</i></a>
+
+
+    <!-- Modal Structure -->
+    <div id="modal1" class="modal">
+        <div class="modal-content">
+            <h4>Adicionar vértice (nodo)</h4>
+            <label>Nome:</label>
+            <input id="inputID" type="text" />
+            <label>URL da imagem: (opicional)</label>
+            <input id="inputURL" type="text" />
+            <button onclick="addNewNode()" class="waves-effect waves-light btn">Adicionar</button>
+        </div>
+        <div class="modal-footer">
+            <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Fechar</a>
+        </div>
+    </div>
+
+    <!-- fab -->
+    <div class="fixed-action-btn click-to-toggle ">
+        <a data-position="left" data-delay="50" data-tooltip="Ações" class="btn-floating btn-large tooltipped">
+      <i class="large material-icons">menu</i>
+    </a>
+        <ul>
+            <li><a id="justInteract" onclick="disableAllActions()" class="btn-floating blue tooltipped pulse" data-position="left"
+                    data-delay="50" data-tooltip="Apenas Interagir"><i class="material-icons">touch_app</i></a></li>
+            <li><a id="addNode" href="#modal1" class="btn-floating green tooltipped modal-trigger" data-position="left" data-delay="50"
+                    data-tooltip="Adicionar Vértice"><i class="material-icons">add</i></a></li>
+            <li><a id="enableLinks" onclick="enableLinks()" class="btn-floating green tooltipped" data-position="left" data-delay="50"
+                    data-tooltip="Adicionar Aresta"><i class="material-icons">linear_scale</i></a></li>
+            <li><a id="deleteNode" onclick="deleteNode()" class="btn-floating red tooltipped" data-position="left" data-delay="50"
+                    data-tooltip="Remover Vértice"><i class="material-icons">delete_forever</i></a></li>
+            <li><a id="enableDeleteLinks" onclick="enableRemoveLinks()" class="btn-floating red tooltipped" data-position="left"
+                    data-delay="50" data-tooltip="Remover Aresta"><i class="material-icons">content_cut</i></a></li>
+        </ul>
+    </div>
+
+
+</body>
+
+</html>
