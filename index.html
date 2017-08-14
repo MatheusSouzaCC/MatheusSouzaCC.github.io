@@ -24,8 +24,44 @@
 
     <script type="text/javascript">
         $(document).ready(function () {
-            $('.modal').modal();
+            $('.modal').modal({
+                ready: function (modal, trigger) { // Callback for Modal open. Modal and trigger parameters available.
+                    disableAllActions();
+                    addModalIsOpen = true;
+                    $("#inputID").focus();
+                    $('#justInteract').removeClass('pulse');
+                    $('#addNode').addClass('pulse');
+                },
+                complete: function () {
+                    $("#inputID").val("");
+                    $("#inputURL").val("");
+                    addModalIsOpen = false;
+                    $('#addNode').removeClass('pulse');
+                    $('#justInteract').addClass('pulse');
+                } // Callback for Modal close
+            }
+            );
             $('.tooltipped').tooltip();
+            $(".button-collapse").sideNav();
+
+            $('body').keypress(function (e) {
+                if (addModalIsOpen && (e.which == 13 || e.keyCode == 13)) {
+                    addNewNode();
+                } else if (e.which == 13 || e.keyCode == 13) {
+                    $("#modalNewNode").modal('open');
+                }
+            });
+
+            $("#toolBox").click(function () {
+                // $('.tap-target').tapTarget('close');
+            });
+
+            if (localStorage.visited == null) {
+                localStorage.visited = "true"
+                $('.tap-target').tapTarget('open');
+            }
+
+
         });
 
         var links = false;
@@ -35,21 +71,20 @@
         var removeLink = false;
         var justInteract = true;
         var lights = 'on';
+        var addModalIsOpen = false;
 
         function addNewNode() {
             var id = $("#inputID").val();
             var url = $("#inputURL").val() == "" ? 'circle.png' : $("#inputURL").val();
 
-            if (id == "" || id == undefined) {
+            if (id == "" || id == undefined || id == null) {
                 alert("Informe um nome ao vértice");
             } else {
-                $("#modal1").modal('close');
+                $("#modalNewNode").modal('close');
                 graph.beginUpdate();
                 graph.addNode(id, url);
-
                 graph.endUpdate();
-                $("#inputID").val("");
-                $("#inputURL").val("");
+                Materialize.toast('Vértice&nbsp<b> ' + id.toUpperCase() + '</b>&nbspadicionado', 3000);
             }
 
         }
@@ -118,18 +153,18 @@
             justInteract = false;
             removeLink = true;
             switchPulse();
-            Materialize.Toast.removeAll();            
+            Materialize.Toast.removeAll();
             Materialize.toast('Clique na aresta para excluí-la. &nbsp<a href="#" id="cancelRemoveLink">Cancelar</a>');
 
-            $("#cancelRemoveLink").click(function () {                
+            $("#cancelRemoveLink").click(function () {
                 disableAllActions();
                 Materialize.Toast.removeAll();
             });
         }
 
-        function customGraphics() {
+        function customGraphics(size) {
             var graphics = Viva.Graph.View.svgGraphics(),
-                nodeSize = 48,
+                nodeSize = size,
                 // we use this method to highlight all realted links
                 // when user hovers mouse over a node:
                 highlightRelatedNodes = function (nodeId, isOn) {
@@ -148,12 +183,12 @@
             // including mouse events:
             graphics.node(function (node) {
                 var ui = Viva.Graph.svg('g'),
-                    svgText = Viva.Graph.svg('text').attr('y', '-4px').attr('fill','teal').text(node.id),
+                    svgText = Viva.Graph.svg('text').attr('y', '-4px').attr('fill', 'teal').text(node.id),
                     img = Viva.Graph.svg('image')
                         .attr('width', nodeSize)
                         .attr('height', nodeSize)
-                        .link(node.data == '' || node.data == null? 'circle.png' : node.data);
-                
+                        .link(node.data == '' || node.data == null ? 'circle.png' : node.data);
+
                 ui.append(svgText);
                 ui.append(img);
                 $(ui).hover(function () { // mouse over															
@@ -166,19 +201,19 @@
 
                     if (removeNode) {
                         var aux = node.id;
-                        graph.removeNode(node.id);                                                
+                        graph.removeNode(node.id);
                         Materialize.toast('Vértice ' + aux + ' excluído.', 3000);
                     }
 
                     if (selectedNode != null && links == true) {
-                        var link = graph.addLink(selectedNode.id, node.id);                                                
-                        Materialize.toast('Caminho (<b>' + selectedNode.id +'</b>, <b>'+node.id+ '</b>) criado.', 3000);                        
-                        selectedNode = null;                        
+                        var link = graph.addLink(selectedNode.id, node.id);
+                        Materialize.toast('Caminho (<b>' + selectedNode.id + '</b>, <b>' + node.id + '</b>) criado.', 3000);
+                        selectedNode = null;
                     } else if (links == true) {
                         selectedNode = node;
-                        
-                        Materialize.toast('Vértice&nbsp<b>' + node.id + '</b>&nbspselecionado.Selecione o segundo vértice.',2000);
-                        
+
+                        Materialize.toast('Vértice&nbsp<b>' + node.id + '</b>&nbspselecionado.Selecione o segundo vértice.', 2000);
+
                     }
                 });
 
@@ -201,9 +236,9 @@
                 });
 
                 $(ui).click(function () {
-                    if (removeLink) {                                                
-                        Materialize.toast('Aresta (<b>'+link.fromId +','+link.toId +'</b>) removido.', 3000);
-                        graph.removeLink(link);                        
+                    if (removeLink) {
+                        Materialize.toast('Aresta (<b>' + link.fromId + ',' + link.toId + '</b>) removido.', 3000);
+                        graph.removeLink(link);
                     }
                 });
 
@@ -219,28 +254,28 @@
             return graphics;
         }
 
-        function toggleLights(){
-            if(lights == 'on'){
-                $('body').css('background-color','black');
+        function toggleLights() {
+            if (lights == 'on') {
+                $('body').css('background-color', 'black');
                 $('#bulb').removeClass('black');
-                $('#bulb').addClass('white');                
+                $('#bulb').addClass('white');
                 $('#bulbIcon').removeClass('white-text');
-                $('#bulbIcon').addClass('black-text');                                
+                $('#bulbIcon').addClass('black-text');
                 lights = 'off';
-            }else{
-                $('body').css('background-color','white');
+            } else {
+                $('body').css('background-color', 'white');
                 $('#bulb').removeClass('white');
-                $('#bulb').addClass('black');                
+                $('#bulb').addClass('black');
                 $('#bulbIcon').removeClass('black-text');
-                $('#bulbIcon').addClass('white-text');                
+                $('#bulbIcon').addClass('white-text');
                 lights = 'on';
             }
         }
 
         function main() {
             // As in previous steps, we create a basic structure of a graph:            		           
-            var graphGenerator = Viva.Graph.generator();            
-            graphics = customGraphics();
+            var graphGenerator = Viva.Graph.generator();
+            graphics = customGraphics(48);
 
             // Finally render the graph with our customized graphics object:
             var renderer = Viva.Graph.View.renderer(graph, {
@@ -248,19 +283,19 @@
             });
 
             $('.zoom').click(function (e) {
-                    e.preventDefault();
-                    if ($(this).hasClass('in')) {
-                        renderer.zoomIn();
-                    } else {
-                        renderer.zoomOut();
-                    }
-                });
-            
-            $('.reset').click(function () {
-                    renderer.reset()
-                });
+                e.preventDefault();
+                if ($(this).hasClass('in')) {
+                    renderer.zoomIn();
+                } else {
+                    renderer.zoomOut();
+                }
+            });
 
-            renderer.run();            
+            $('.reset').click(function () {
+                renderer.reset()
+            });
+
+            renderer.run();
 
         }
     </script>
@@ -276,28 +311,58 @@
             margin-top: 3px;
             margin-left: 3px
         }
-        .zoom,.reset,#bulb{margin: 5px}
 
-        text{color: white !important}
+        .zoom,
+        .reset,
+        #bulb,
+        #menu {
+            margin: 5px
+        }
+
+        text {
+            color: white !important
+        }
     </style>
 </head>
 
 <body onload='main()'>
+    <a id="menu" data-activates="slide-out" class="button-collapse btn-floating waves-effect waves-light blue-grey lighten-3 left"><i class="black-text material-icons large">menu</i></a>
+
     <a id="bulb" onclick="toggleLights()" class="btn-floating waves-effect waves-dark black right"><i id='bulbIcon' class="white-text material-icons large">lightbulb_outline</i></a>
     <a class="btn-floating waves-effect waves-light reset blue-grey lighten-3 right"><i class="black-text material-icons large">find_replace</i></a>
     <a class="btn-floating waves-effect waves-light zoom out blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_out</i></a>
-    <a class="btn-floating waves-effect waves-light zoom in blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_in</i></a>
+    <a class="btn-floating waves-effect waves-light zoom in blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_in</i></a>    
 
+    <!--side-nav-->
+    <ul id="slide-out" class="side-nav">
+        <li>
+            <div class="user-view" style="padding:90px !important">
+                <div class="background">
+                    <img src="grafo.png">
+                </div>
+            </div>
+        </li>
+        <li><a class="subheader">Mais ações</a></li>
+        <li><a href="#!"><i class="material-icons">compare_arrows</i>Grafo Orientado</a></li>
+        <li><a href="#!"><i class="material-icons">file_upload</i>Fazer upload de grafo</a></li>
+        <li>
+            <div class="divider"></div>
+        </li>
+        <li><a class="subheader">Ferramenta</a></li>
+        <li><a href="#!"><i class="material-icons">info</i>Mais informações</a></li>
+        <li><a href="#!"><i class="material-icons">code</i>Por Matheus de Souza</a></li>
+        <li><a href="#!"><i class="material-icons">child_friendly</i>Versão Alpha 0.1</a></li>
+    </ul>
 
     <!-- Modal Structure -->
-    <div id="modal1" class="modal">
+    <div id="modalNewNode" class="modal">
         <div class="modal-content">
             <h4>Adicionar vértice (nodo)</h4>
             <label>Nome:</label>
             <input id="inputID" type="text" />
             <label>URL da imagem: (opicional)</label>
             <input id="inputURL" type="text" />
-            <button onclick="addNewNode()" class="waves-effect waves-light btn">Adicionar</button>
+            <button id="buttonAdd" onclick="addNewNode()" class="waves-effect waves-light btn">Adicionar</button>
         </div>
         <div class="modal-footer">
             <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Fechar</a>
@@ -306,14 +371,14 @@
 
     <!-- fab -->
     <div class="fixed-action-btn click-to-toggle ">
-        <a data-position="left" data-delay="50" data-tooltip="Ações" class="btn-floating btn-large tooltipped">
-      <i class="large material-icons">menu</i>
+        <a id="toolBox" data-position="left" data-delay="50" data-tooltip="Ações" class="btn-floating btn-large tooltipped">
+      <i class="large material-icons">more_vert</i>
     </a>
         <ul>
             <li><a id="justInteract" onclick="disableAllActions()" class="btn-floating blue tooltipped pulse" data-position="left"
                     data-delay="50" data-tooltip="Apenas Interagir"><i class="material-icons">touch_app</i></a></li>
-            <li><a id="addNode" href="#modal1" class="btn-floating green tooltipped modal-trigger" data-position="left" data-delay="50"
-                    data-tooltip="Adicionar Vértice"><i class="material-icons">add</i></a></li>
+            <li><a id="addNode" href="#modalNewNode" class="btn-floating green tooltipped modal-trigger" data-position="left"
+                    data-delay="50" data-tooltip="Adicionar Vértice (Enter)"><i class="material-icons">add</i></a></li>
             <li><a id="enableLinks" onclick="enableLinks()" class="btn-floating green tooltipped" data-position="left" data-delay="50"
                     data-tooltip="Adicionar Aresta"><i class="material-icons">linear_scale</i></a></li>
             <li><a id="deleteNode" onclick="deleteNode()" class="btn-floating red tooltipped" data-position="left" data-delay="50"
@@ -323,6 +388,15 @@
         </ul>
     </div>
 
+    <!-- Tap Target Structure -->
+    <div class="tap-target cyan" data-activates="toolBox">
+        <div class="tap-target-content">
+            <h5>As ações principais estão aqui</h5>
+            <p><b>Botões verdes:</b> adicionar vértices e arestas respectivamente.<br>
+                <b>Botões vermelhos:</b> deletar vértices e arestas respectivamente.<br>
+                <b>Botão azul:</b> interagir com o grafo evitando ações indesejadas.</p>
+        </div>
+    </div>
 
 </body>
 
