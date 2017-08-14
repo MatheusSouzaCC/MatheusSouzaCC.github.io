@@ -72,6 +72,7 @@
         var justInteract = true;
         var lights = 'on';
         var addModalIsOpen = false;
+        var renderer = null;
 
         function addNewNode() {
             var id = $("#inputID").val();
@@ -160,6 +161,47 @@
                 disableAllActions();
                 Materialize.Toast.removeAll();
             });
+        }
+
+        function createPhysicsLayout(graph) {
+            return Viva.Graph.Layout.forceDirected(graph, {
+                springLength: 10,
+                springCoeff: 0.0005,
+                dragCoeff: 0.02,
+                gravity: -5.2
+            });
+        }
+
+        function clearAll(confirmation) {
+            if (confirmation) {
+                var result = confirm('Limpar o grafo ? O grafo atual será perdido');
+            }
+
+            if (result || !confirmation) {
+                graph.forEachNode(function (node) {
+                    graph.removeNode(node.id);
+                });
+                renderer.reset();
+            }
+        }
+
+        function createRamdomGraph() {
+            var result = confirm('O grafo atual será perdido. Deseja continuar ?');
+
+            if (result) {
+                clearAll(false);
+                var n = Math.floor((Math.random() * 10) + 1);
+                var m = Math.floor((Math.random() * 3) + 1);
+                graph = Viva.Graph.generator().grid(n, m);
+
+                renderer.dispose(); // remove the graph
+                renderer = null;
+
+                renderer = Viva.Graph.View.renderer(graph, {
+                    graphics: customGraphics(48),
+                });
+                renderer.run();
+            }
         }
 
         function customGraphics(size) {
@@ -274,11 +316,9 @@
 
         function main() {
             // As in previous steps, we create a basic structure of a graph:            		           
-            var graphGenerator = Viva.Graph.generator();
             graphics = customGraphics(48);
-
             // Finally render the graph with our customized graphics object:
-            var renderer = Viva.Graph.View.renderer(graph, {
+            renderer = Viva.Graph.View.renderer(graph, {
                 graphics: graphics
             });
 
@@ -305,17 +345,28 @@
         svg {
             width: 100%;
             height: 100%;
+            overflow-y: hidden;
+        }
+
+        @media screen and (min-width: 480px) {
+            body,
+            html,
+            svg {
+                overflow-y: hidden;
+            }
         }
 
         .btn {
             margin-top: 3px;
-            margin-left: 3px
+            margin-left: 3px;
         }
 
         .zoom,
         .reset,
         #bulb,
-        #menu {
+        #menu,
+        #clear,
+        #ramdom {
             margin: 5px
         }
 
@@ -328,10 +379,13 @@
 <body onload='main()'>
     <a id="menu" data-activates="slide-out" class="button-collapse btn-floating waves-effect waves-light blue-grey lighten-3 left"><i class="black-text material-icons large">menu</i></a>
 
-    <a id="bulb" onclick="toggleLights()" class="btn-floating waves-effect waves-dark black right"><i id='bulbIcon' class="white-text material-icons large">lightbulb_outline</i></a>
-    <a class="btn-floating waves-effect waves-light reset blue-grey lighten-3 right"><i class="black-text material-icons large">find_replace</i></a>
-    <a class="btn-floating waves-effect waves-light zoom out blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_out</i></a>
-    <a class="btn-floating waves-effect waves-light zoom in blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_in</i></a>    
+    <a id="bulb" onclick="toggleLights()" data-position="bottom" data-delay="50" data-tooltip="Alterar tema" class="tooltipped btn-floating waves-effect waves-dark black right"><i id='bulbIcon' class="white-text material-icons large">lightbulb_outline</i></a>
+    <a id="clear" onclick="clearAll(true)" data-position="bottom" data-delay="50" data-tooltip="Limpar tudo" class="btn-floating waves-effect waves-light tooltipped deep-orange lighten-2 right"><i class="material-icons large">delete_sweep</i></a>
+    <a id="ramdom" onclick="createRamdomGraph()" data-position="bottom" data-delay="50" data-tooltip="Gerar grafo aleatório"
+        class="btn-floating waves-effect waves-light tooltipped green accent-2 right"><i class="material-icons large">casino</i></a>
+    <a data-position="bottom" data-delay="50" data-tooltip="Reverter zoom" class="tooltipped btn-floating waves-effect waves-light reset blue-grey lighten-3 right"><i class="black-text material-icons large">find_replace</i></a>
+    <a data-position="bottom" data-delay="50" data-tooltip="Diminuir zoom" class="tooltipped btn-floating waves-effect waves-light zoom out blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_out</i></a>
+    <a data-position="bottom" data-delay="50" data-tooltip="Aumentar zoom" class="tooltipped btn-floating waves-effect waves-light zoom in blue-grey lighten-3 right"><i class="black-text material-icons large">zoom_in</i></a>
 
     <!--side-nav-->
     <ul id="slide-out" class="side-nav">
@@ -392,9 +446,9 @@
     <div class="tap-target cyan" data-activates="toolBox">
         <div class="tap-target-content">
             <h5>As ações principais estão aqui</h5>
-            <p><b>Botões verdes:</b> adicionar vértices e arestas respectivamente.<br>
-                <b>Botões vermelhos:</b> deletar vértices e arestas respectivamente.<br>
-                <b>Botão azul:</b> interagir com o grafo evitando ações indesejadas.</p>
+            <p><b>Botão azul:</b> interagir com o grafo evitando ações indesejadas.<br>
+                <b>Botões verdes:</b> adicionar vértices e arestas respectivamente.<br>
+                <b>Botões vermelhos:</b> deletar vértices e arestas respectivamente.</p>
         </div>
     </div>
 
