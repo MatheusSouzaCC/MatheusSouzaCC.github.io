@@ -63,7 +63,23 @@
 
 
         });
+        
+        
+        var getUrlParameter = function getUrlParameter(sParam) {
+        var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
 
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
+    }
+};
+        
         var links = false;
         var graph = Viva.Graph.graph();
         var selectedNode = null;
@@ -73,6 +89,11 @@
         var lights = 'on';
         var addModalIsOpen = false;
         var renderer = null;
+        
+        var isOriented = getUrlParameter('isOriented') != undefined ? (getUrlParameter('isOriented') === 'true') : false;
+        console.log(isOriented);
+            
+        
 
         function addNewNode() {
             var id = $("#inputID").val();
@@ -203,7 +224,20 @@
                 renderer.run();
             }
         }
-
+        
+        var createMarker = function(id) {
+                    return Viva.Graph.svg('marker')
+                               .attr('id', id)
+                               .attr('viewBox', "0 0 10 10")
+                               .attr('refX', "10")
+                               .attr('refY', "5")
+                               .attr('markerUnits', "strokeWidth")
+                               .attr('markerWidth', "10")
+                               .attr('markerHeight', "5")
+                               .attr('orient', "auto")
+							   .attr('fill',"red");                        
+                }
+        
         function customGraphics(size) {
             var graphics = Viva.Graph.View.svgGraphics(),
                 nodeSize = size,
@@ -267,6 +301,8 @@
                     ')');
             });
 
+            if(!isOriented){
+            console.log("!oriented");
             graphics.link(function (link) {
                 var ui = Viva.Graph.svg('path');
                 ui.attr('stroke', 'gray');
@@ -292,7 +328,76 @@
 
                 linkUI.attr("d", data);
             })
+        }else{
+            console.log("oriented");
+            var geom = Viva.Graph.geom();
 
+            graphics.link(function(link){
+                var ui = Viva.Graph.svg('path');
+                ui.attr('stroke', 'gray')
+                .attr('marker-end', 'url(#Triangle)');
+
+                $(ui).hover(function () {
+                    ui.attr('stroke', (removeLink) ? 'red' : 'blue');
+                }, function () {
+                    ui.attr('stroke', 'gray');
+                });
+
+                $(ui).click(function () {
+                    if (removeLink) {
+                        Materialize.toast('Aresta (<b>' + link.fromId + ',' + link.toId + '</b>) removido.', 3000);
+                        graph.removeLink(link);
+                    }
+                });
+
+
+                return ui;            
+                                
+            }).placeLink(function(linkUI, fromPos, toPos) {
+                // Here we should take care about
+                //  "Links should start/stop at node's bounding box, not at the node center."
+
+                // For rectangular nodes Viva.Graph.geom() provides efficient way to find
+                // an intersection point between segment and rectangle
+                var toNodeSize = nodeSize,
+                    fromNodeSize = nodeSize;
+                
+                                marker = createMarker('Triangle');
+            marker.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
+
+            // Marker should be defined only once in <defs> child element of root <svg> element:
+            var defs = graphics.getSvgRoot().append('defs');
+            defs.append(marker);
+                
+                var from = geom.intersectRect(
+                        // rectangle:
+                                fromPos.x - fromNodeSize / 3, // left	
+                                fromPos.y - fromNodeSize / 3, // top
+                                fromPos.x + fromNodeSize / 3, // right
+                                fromPos.y + fromNodeSize / 3, // bottom
+                        // segment:
+                                fromPos.x, fromPos.y, toPos.x, toPos.y)
+                           || fromPos; // if no intersection found - return center of the node
+
+                var to = geom.intersectRect(
+                        // rectangle:
+                                toPos.x - toNodeSize / 2.4, // left
+                                toPos.y - toNodeSize / 2.5, // top
+                                toPos.x + toNodeSize / 2.5, // right
+                                toPos.y + toNodeSize / 2.5, // bottom
+                        // segment:
+                                toPos.x, toPos.y, fromPos.x, fromPos.y)
+                            || toPos; // if no intersection found - return center of the node
+
+                var data = 'M' + from.x + ',' + from.y +
+                           'L' + to.x + ',' + to.y;
+
+                linkUI.attr("d", data);
+                
+                
+            });
+            
+        }
             return graphics;
         }
 
@@ -313,8 +418,20 @@
                 lights = 'on';
             }
         }
+        
+        function changeGraphType(oriented){
+            var r = confirm("O grafo atual será perdido.Deseja continuar?");
+            
+            if(r){
+                if(oriented){
+                    window.location = window.location.href.split('?')[0] + "?isOriented=true";                    
+                }else{
+                    window.location = window.location.href.split('?')[0] + "?isOriented=false";                    
+                }
+            }
+        }
 
-        function main() {
+        function main() {            
             // As in previous steps, we create a basic structure of a graph:            		           
             graphics = customGraphics(48);
             // Finally render the graph with our customized graphics object:
@@ -397,7 +514,8 @@
             </div>
         </li>
         <li><a class="subheader">Mais ações</a></li>
-        <li><a href="#!"><i class="material-icons">compare_arrows</i>Grafo Orientado</a></li>
+        <li><a href="#!" onclick="changeGraphType(true)"><i class="material-icons">compare_arrows</i>Grafo Orientado</a></li>
+        <li><a href="#!" onclick="changeGraphType(false)"><i class="material-icons">timeline</i>Grafo Não-Orientado</a></li>
         <li><a href="#!"><i class="material-icons">file_upload</i>Fazer upload de grafo</a></li>
         <li>
             <div class="divider"></div>
