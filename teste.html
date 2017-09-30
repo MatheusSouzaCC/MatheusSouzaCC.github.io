@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>VivaGraphs test page</title>
+    <script type="text/javascript" src="vivagraph.js"></script>
+
+    <script type='text/javascript'>
+        /*global Viva*/
+        function onLoad() {
+            var graphGenerator = Viva.Graph.generator();
+            //graphGenerator.grid(10, 10);
+            var graph = Viva.Graph.graph();
+
+            graph.addNode('A', '#4286f4');
+            graph.addNode('B', '#b23021');
+            graph.addNode('C', '#46a354');
+            graph.addNode('D', '#4286f4');
+            graph.addNode('E', '#46a354');
+            graph.addNode('F', '#b23021');
+
+            graph.addLink('A', 'B');
+            graph.addLink('A', 'C');
+            graph.addLink('C', 'B');
+            graph.addLink('C', 'D');
+            graph.addLink('D', 'E');
+            graph.addLink('E', 'B');
+            graph.addLink('F', 'A');
+
+
+
+            var layout = Viva.Graph.Layout.forceDirected(graph, {
+                springLength: 10,
+                springCoeff: 0.0008,
+                dragCoeff: 0.02,
+                gravity: -1.2
+            });
+
+            var graphics = Viva.Graph.View.svgGraphics();
+
+            // Node pinning is an attribute, which tells layout algorithm
+            // to not update node's position. Effectively the node looks
+            // like it is pinned to the canvas.
+
+            // You can pin/unpin node any time you want:
+            graphics.node(function (node) {
+                if(!node.data){
+                    node.data = '#01579b';
+                }
+
+                var ui = Viva.Graph.svg('g'),
+                    svgText = Viva.Graph.svg('text').attr('y', '-4px').attr("font-size", 8).attr("font-family", "Arial").text(node.id),
+                    rect = Viva.Graph.svg("rect")
+                        .attr("width", 10)
+                        .attr("height", 10)
+                        .attr("rx", 100)
+                        .attr("ry", 100)
+                        .attr("fill", node.data);
+
+                ui.append(svgText);
+                ui.append(rect);
+
+                return ui;
+            }).placeNode(function(nodeUI, pos) {
+                // 'g' element doesn't have convenient (x,y) attributes, instead
+                // we have to deal with transforms: http://www.w3.org/TR/SVG/coords.html#SVGGlobalTransformAttribute
+                nodeUI.attr('transform',
+                            'translate(' +
+                                  (pos.x - 10/2) + ',' + (pos.y - 10/2) +
+                            ')');
+            });
+
+            var renderer = Viva.Graph.View.renderer(graph, {
+                layout: layout,
+                graphics: graphics,
+                container: document.getElementById('graphContainer')
+            });
+
+            renderer.run();
+        }
+    </script>
+    <style type='text/css'>
+        body,
+        svg,
+        #graphContainer {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            margin: 0;
+        }
+
+        .label {
+            position: absolute;
+            top: 10px;
+            color: white;
+            font-size: 18px;
+            left: 10px;
+            font-family: Verdana;
+        }
+    </style>
+</head>
+
+<body onload="onLoad()">
+    <div id='graphContainer'></div>
+</body>
+
+</html>
